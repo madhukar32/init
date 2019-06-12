@@ -49,7 +49,6 @@ Options:
     -d DEVICE   Install Container Linux to the given device.
     -V VERSION  Version to install (e.g. current) [default: ${VERSION_ID}].
     -B BOARD    Container Linux board to use [default: ${BOARD}].
-    -C CHANNEL  Release channel to use (e.g. beta) [default: ${CHANNEL_ID}].
     -o OEM      OEM type to install (e.g. ami) [default: ${OEM_ID:-(none)}].
     -c CLOUD    Insert a cloud-init config to be executed on boot.
     -i IGNITION Insert an Ignition config to be executed on boot.
@@ -549,7 +548,7 @@ function install_from_url() {
     fi
 
     if [[ -z "${BASE_URL}" ]]; then
-        BASE_URL="https://${CHANNEL_ID}.release.core-os.net/${BOARD}"
+        BASE_URL="https://storage.googleapis.com/coreos-images/boards/${BOARD}"
     fi
 
     # if the version is "current", resolve the actual version number
@@ -564,41 +563,41 @@ function install_from_url() {
     fi
 
     local IMAGE_URL="${BASE_URL}/${VERSION_ID}/${IMAGE_NAME}"
-    local SIG_NAME="${IMAGE_NAME}.sig"
-    local SIG_URL="${BASE_URL}/${VERSION_ID}/${SIG_NAME}"
+    #local SIG_NAME="${IMAGE_NAME}.sig"
+    #local SIG_URL="${BASE_URL}/${VERSION_ID}/${SIG_NAME}"
 
     if ! wget --spider --quiet "${IMAGE_URL}"; then
         echo "$0: Image URL unavailable: $IMAGE_URL" >&2
         exit 1
     fi
 
-    if ! wget --spider --quiet "${SIG_URL}"; then
-        echo "$0: Image signature unavailable: $SIG_URL" >&2
-        exit 1
-    fi
+    #if ! wget --spider --quiet "${SIG_URL}"; then
+    #    echo "$0: Image signature unavailable: $SIG_URL" >&2
+    #    exit 1
+    #fi
 
-    # Setup GnuPG for verifying the image signature
-    export GNUPGHOME="${WORKDIR}/gnupg"
-    mkdir -p "${GNUPGHOME}"
-    if [ -n "${KEYFILE}" ]; then
-        gpg --batch --quiet --import < "${KEYFILE}"
-    else
-        gpg --batch --quiet --import <<< "${GPG_KEY}"
-    fi
+    ## Setup GnuPG for verifying the image signature
+    #export GNUPGHOME="${WORKDIR}/gnupg"
+    #mkdir -p "${GNUPGHOME}"
+    #if [ -n "${KEYFILE}" ]; then
+    #    gpg --batch --quiet --import < "${KEYFILE}"
+    #else
+    #    gpg --batch --quiet --import <<< "${GPG_KEY}"
+    #fi
 
-    echo "Downloading the signature for ${IMAGE_URL}..."
-    wget --no-verbose -O "${WORKDIR}/${SIG_NAME}" "${SIG_URL}"
+    #echo "Downloading the signature for ${IMAGE_URL}..."
+    #wget --no-verbose -O "${WORKDIR}/${SIG_NAME}" "${SIG_URL}"
 
     echo "Downloading, writing and verifying ${IMAGE_NAME}..."
     if ! wget --no-verbose -O - "${IMAGE_URL}" \
-        | tee >(bzip2 -cd >&3) \
-        | gpg --batch --trusted-key "${GPG_LONG_ID}" \
-            --verify "${WORKDIR}/${SIG_NAME}" -
+        | tee >(bzip2 -cd >&3)
+    #     | gpg --batch --trusted-key "${GPG_LONG_ID}" \
+    #        --verify "${WORKDIR}/${SIG_NAME}" -
     then
         local EEND=( "${PIPESTATUS[@]}" )
         [ ${EEND[0]} -ne 0 ] && echo "${EEND[0]}: Download of ${IMAGE_NAME} did not complete" >&2
         [ ${EEND[1]} -ne 0 ] && echo "${EEND[1]}: Cannot expand ${IMAGE_NAME} to ${DEVICE}" >&2
-        [ ${EEND[2]} -ne 0 ] && echo "${EEND[2]}: GPG signature verification failed for ${IMAGE_NAME}" >&2
+    #    [ ${EEND[2]} -ne 0 ] && echo "${EEND[2]}: GPG signature verification failed for ${IMAGE_NAME}" >&2
         exit 1
     fi 3> >(write_to_disk)
 
